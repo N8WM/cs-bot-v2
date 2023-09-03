@@ -1,73 +1,65 @@
-import fs from "node:fs"
-import path from "node:path"
+const fs = require("node:fs")
+const path = require("node:path")
 
-import { Client, Collection, Events, GatewayIntentBits } from "discord.js"
-import { config } from "dotenv"
+const { Client, Collection, Events, GatewayIntentBits } = require("discord.js")
+const dotenv = require("dotenv")
 
-// Configure dotenv to load our .env file
-config()
+dotenv.config()
 
-// Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+
 client.commands = new Collection()
 
-// Read all files in the commands directory
+// Read all the files in the commands directory and filter out any that aren't JavaScript files
 const commandsPath = path.join(__dirname, "commands")
 const commandFiles = fs
   .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(".ts") || file.endsWith(".js"))
+  .filter((file) => file.endsWith(".js"))
 
-// Loop over each file and import it
+// Loop over each file in the commands directory and load the command
 for (const file of commandFiles) {
   const filePath = path.join(commandsPath, file)
   const command = require(filePath)
-  console.log(`Loaded command ${command.data.name}`)
-  // Set a new item in the Collection
-  // With the key as the command name and the value as the exported module
-  if ("data" in command && "execute" in command)
+  // Set a new item in the Collection with the key as the command name and the value as the exported module
+  if ("data" in command && "execute" in command) {
     client.commands.set(command.data.name, command)
-  else
+  } else {
     console.log(
       `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
     )
+  }
 }
 
-// When the client is ready, run this code (only once)
-// We use 'c' for the event parameter to keep it separate from the already defined 'client'
 client.once(Events.ClientReady, (c) => {
   console.log(`Ready! Logged in as ${c.user.tag}`)
 })
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  // If the interaction isn't a command, return early
   if (!interaction.isChatInputCommand()) return
 
-  // Get the command from the collection
   const command = interaction.client.commands.get(interaction.commandName)
 
-  // If the command doesn't exist, return early
   if (!command) {
     console.error(`No command matching ${interaction.commandName} was found.`)
     return
   }
 
   try {
-    // Execute the command
     await command.execute(interaction)
   } catch (error) {
     console.error(error)
-    if (interaction.replied || interaction.deferred)
+    if (interaction.replied || interaction.deferred) {
       await interaction.followUp({
         content: "There was an error while executing this command!",
         ephemeral: true
       })
-    else
+    } else {
       await interaction.reply({
         content: "There was an error while executing this command!",
         ephemeral: true
       })
+    }
   }
 })
 
-// Log in to Discord with your client's token
 client.login(process.env.BOT_TOKEN)
