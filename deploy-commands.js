@@ -1,19 +1,12 @@
 const { REST, Routes } = require("discord.js")
-const fs = require("node:fs")
-const path = require("node:path")
+const { itemHandler } = require("./utils")
 const dotenv = require("dotenv")
 
 dotenv.config()
 
+// Load all the commands
 const commands = []
-// Grab all the command files from the commands directory you created earlier
-const commandsPath = path.join(__dirname, "commands")
-const commandFiles = fs
-  .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(".js"))
-// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file)
+itemHandler("commands", (filePath) => {
   const command = require(filePath)
   if ("data" in command && "execute" in command) {
     commands.push(command.data.toJSON())
@@ -22,7 +15,7 @@ for (const file of commandFiles) {
       `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
     )
   }
-}
+})
 
 // Construct and prepare an instance of the REST module
 const rest = new REST().setToken(process.env.BOT_TOKEN)
