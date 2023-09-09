@@ -6,6 +6,7 @@ const isJsFile = (item) => item.endsWith(".js")
 
 /**
  * Recursively handles all files and directories in a given directory.
+ * @function itemHandler
  * @param {string} dirName - The name of the directory to handle.
  * @param {function} callback - The function to call for each file found.
  * @returns {void}
@@ -32,4 +33,25 @@ const itemHandler = (dirName, callback) => {
   }
 }
 
-module.exports = { itemHandler }
+/**
+ * Sends a message to a specific channel in a guild.
+ * @async
+ * @function sendMessage
+ * @param {import("discord.js").Guild} guild - The guild where the message will be sent.
+ * @param {import("discord.js").Snowflake} channelId - The ID of the channel where the message will be sent.
+ * @param {string} message - The message to be sent.
+ * @returns {Promise<import("discord.js").Message|null>} - The message that was sent, or null if the channel does not exist.
+ */
+const sendMessage = async (guild, channelId, message) => {
+  const channel = await guild.channels
+    .fetch(channelId)
+    .catch(console.error)
+  if (!channel) {
+    console.error(`The channel with ID ${channelId} does not exist.`)
+    return null
+  }
+  const result = channel.send(message)
+  return result
+}
+
+module.exports = { itemHandler, sendMessage }

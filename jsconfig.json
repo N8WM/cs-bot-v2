@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "CommonJS",
+    "checkJs": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "commands/*": ["commands/*"],
+      "events/*": ["events/*"]
+    },
+    "lib": ["ES6"]
+  },
+  "exclude": ["node_modules"]
+}

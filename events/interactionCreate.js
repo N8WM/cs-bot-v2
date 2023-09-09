@@ -2,6 +2,12 @@ const { Events } = require("discord.js")
 
 const name = Events.InteractionCreate
 
+/**
+ * The function to execute when the 'InteractionCreate' event is emitted.
+ * @async
+ * @function execute
+ * @param {import("discord.js").Interaction} interaction - The interaction that was created.
+ */
 const execute = async (interaction) => {
   if (!interaction.isChatInputCommand()) return
 

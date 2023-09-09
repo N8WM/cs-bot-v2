@@ -4,7 +4,17 @@ const dotenv = require("dotenv")
 
 dotenv.config()
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers
+    // GatewayIntentBits.GuildMessages,
+    // GatewayIntentBits.GuildMessageReactions,
+    // GatewayIntentBits.GuildMessageTyping,
+    // GatewayIntentBits.GuildPresences,
+    // GatewayIntentBits.GuildEmojisAndStickers
+  ]
+})
 
 client.commands = new Collection()
 
