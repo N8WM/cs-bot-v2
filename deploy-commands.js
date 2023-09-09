@@ -18,23 +18,26 @@ itemHandler("commands", (filePath) => {
 })
 
 // Construct and prepare an instance of the REST module
-const rest = new REST().setToken(process.env.BOT_TOKEN)
+const rest = new REST().setToken(process.env.BOT_TOKEN);
 
 // Deploy commands
-;(async () => {
+(async () => {
   try {
     console.log(
       `Started refreshing ${commands.length} application (/) commands.`
     )
 
     // Refresh all commands in the guild with the current set
-    const isGlobalDeploy =
-      process.argv.length > 2 && ["--global", "-g"].includes(process.argv[2])
+    const isGlobalDeploy = process.argv.length > 2 && ["--global", "-g"].includes(process.argv[2])
+    /** @type {any} */
     let data = null
     if (isGlobalDeploy) {
-      data = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
-        body: commands
-      })
+      data = await rest.put(
+        Routes.applicationCommands(
+          process.env.CLIENT_ID
+        ),
+        { body: commands }
+      )
     } else {
       data = await rest.put(
         Routes.applicationGuildCommands(
@@ -46,9 +49,7 @@ const rest = new REST().setToken(process.env.BOT_TOKEN)
     }
 
     console.log(
-      `Successfully reloaded ${data.length} application (/) commands${
-        isGlobalDeploy ? " globally" : ""
-      }.`
+      `Successfully reloaded ${data.length} application (/) commands${isGlobalDeploy ? " globally" : ""}.`
     )
   } catch (error) {
     console.error(error)

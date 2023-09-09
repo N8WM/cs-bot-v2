@@ -1,7 +1,26 @@
 const fs = require("node:fs")
 const path = require("node:path")
 
+/**
+ * @typedef {import("discord.js").Guild} Guild
+ * @typedef {import("discord.js").Snowflake} Snowflake
+ * @typedef {import("discord.js").Message} Message
+ */
+
+/**
+ * Checks if a given item is a directory.
+ * @function isDir
+ * @param {string} item - The item to check.
+ * @returns {boolean} - True if the item is a directory, false otherwise.
+ */
 const isDir = (item) => fs.lstatSync(item).isDirectory()
+
+/**
+ * Checks if a given item is a JavaScript file.
+ * @function isJsFile
+ * @param {string} item - The item to check.
+ * @returns {boolean} - True if the item is a JavaScript file, false otherwise.
+ */
 const isJsFile = (item) => item.endsWith(".js")
 
 /**
@@ -37,12 +56,13 @@ const itemHandler = (dirName, callback) => {
  * Sends a message to a specific channel in a guild.
  * @async
  * @function sendMessage
- * @param {import("discord.js").Guild} guild - The guild where the message will be sent.
- * @param {import("discord.js").Snowflake} channelId - The ID of the channel where the message will be sent.
+ * @param {Guild} guild - The guild where the message will be sent.
+ * @param {Snowflake} channelId - The ID of the channel where the message will be sent.
  * @param {string} message - The message to be sent.
- * @returns {Promise<import("discord.js").Message|null>} - The message that was sent, or null if the channel does not exist.
+ * @returns {Promise<Message|null>} - The message that was sent, or null if the channel does not exist.
  */
 const sendMessage = async (guild, channelId, message) => {
+  /** @type {any} */
   const channel = await guild.channels
     .fetch(channelId)
     .catch(console.error)
