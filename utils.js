@@ -1,5 +1,9 @@
+const { Collection } = require("discord.js")
 const fs = require("node:fs")
 const path = require("node:path")
+const dotenv = require("dotenv")
+
+dotenv.config()
 
 /**
  * @typedef {import("discord.js").Channel} Channel
@@ -7,7 +11,43 @@ const path = require("node:path")
  * @typedef {import("discord.js").Snowflake} Snowflake
  * @typedef {import("discord.js").Message} Message
  * @typedef {import("discord.js").Client} Client
+ * @typedef {{ name: string, value: string }[]} AssignableRoles
+ * @typedef {{ assignableRoles?: AssignableRoles }} GuildGlobals
+ * @typedef {import("discord.js").Collection<string, GuildGlobals>} GuildsGlobals
  */
+
+/**
+ * Gets the global variables for a guild.
+ * @function getGuildGlobals
+ * @param {Guild} guild - The guild to get the global variables for.
+ * @returns {GuildGlobals} - The global variables for the guild.
+ */
+const getGuildGlobals = (guild) => {
+  /** @type {GuildsGlobals} */
+  const guildsGlobals = global.guildsGlobals
+  return guildsGlobals.get(guild.id)
+}
+
+/**
+ * Sets a global variable for a guild.
+ * @function setGuildGlobal
+ * @param {Guild} guild - The guild to set the global variable for.
+ * @param {string} key - The key of the global variable to set.
+ * @param {any} value - The value to set the global variable to.
+ * @returns {void}
+ */
+const setGuildGlobal = (guild, key, value) => {
+  /** @type {GuildsGlobals} */
+  const guildsGlobals = global.guildsGlobals
+  let guildGlobals = guildsGlobals.get(guild.id)
+
+  if (!guildGlobals) {
+    guildsGlobals.set(guild.id, {})
+    guildGlobals = guildsGlobals.get(guild.id)
+  }
+
+  guildGlobals[key] = value
+}
 
 /**
  * Checks if a given item is a directory.
@@ -86,22 +126,23 @@ const sendMessage = async (guild, channelId, message) => {
  * @param {Client} client - The client to use to fetch the guilds.
  * @returns {Promise<void>}
  */
-const updateAssignableRoleCache = (client) => {
-  global.assignableRoles = []
-  return client.guilds.fetch().then(oa2guilds => {
+const updateAssignableRoleCache = (client) =>
+  client.guilds.fetch().then(oa2guilds => {
     oa2guilds.forEach(oa2guild => {
       oa2guild.fetch().then(guild => {
+        /** @type {AssignableRoles} */
+        const guildAssignableRoles = []
         guild.roles.fetch().then(roles => {
           roles.forEach(role => {
             let roleRegexStr = process.env.COURSE_ROLES_REGEXP + "|" + process.env.MISC_ROLES_REGEXP
             let roleRegex = new RegExp(roleRegexStr)
-            if (roleRegex.test(role.name)) global.assignableRoles.push({ name: role.name, value: role.id })
+            if (roleRegex.test(role.name)) guildAssignableRoles.push({ name: role.name, value: role.id })
           })
         }).catch(console.error)
+        setGuildGlobal(guild, "assignableRoles", guildAssignableRoles)
       }).catch(console.error)
     })
   }).catch(console.error)
-}
 
 
-module.exports = { itemHandler, sendMessage, updateAssignableRoleCache }
+module.exports = { getGuildGlobals, itemHandler, sendMessage, updateAssignableRoleCache }

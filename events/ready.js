@@ -1,4 +1,4 @@
-const { Events } = require("discord.js")
+const { Events, Collection } = require("discord.js")
 const { updateAssignableRoleCache } = require("../utils")
 
 /**
@@ -16,6 +16,7 @@ const once = true
  */
 const execute = (client) => {
   console.log(`Ready! Logged in as ${client.user.tag}`)
+  global.guildsGlobals = new Collection()
   return updateAssignableRoleCache(client)
 }
 

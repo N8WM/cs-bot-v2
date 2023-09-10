@@ -1,9 +1,11 @@
 const { SlashCommandBuilder } = require("discord.js")
+const { getGuildGlobals } = require("../utils")
 
 /**
  * @typedef {import("discord.js").CommandInteraction} CommandInteraction
  * @typedef {import("discord.js").AutocompleteInteraction} AutocompleteInteraction
  * @typedef {import("discord.js").GuildManager} GuildManager
+ * @typedef {import("discord.js").Collection<string, [{ name: string, value: string }]>} RoleCollection
  */
 
 const data = new SlashCommandBuilder()
@@ -24,7 +26,17 @@ const data = new SlashCommandBuilder()
  */
 const autocomplete = async (interaction) => {
     const focusedValue = interaction.options.getFocused()
-    const filtered = global.assignableRoles.filter(role => role.name.toLowerCase().includes(focusedValue.toLowerCase()))
+    const guildAssignables = getGuildGlobals(interaction.guild).assignableRoles
+
+    if (!guildAssignables) {
+        console.error(`No assignable roles found for ${interaction.guildId}.`)
+        interaction.respond([])
+        return
+    }
+
+    const filtered = guildAssignables.filter(
+        role => role.name.toLowerCase().includes(focusedValue.toLowerCase())
+    )
     await interaction.respond(filtered)
 }
 
@@ -38,8 +50,15 @@ const execute = async (interaction) => {
     const role = interaction.options.get("role").value.toString()
     const guild = interaction.guild
     const member = await guild.members.fetch(interaction.user.id).catch(console.error)
+    const guildAssignables = getGuildGlobals(interaction.guild).assignableRoles
 
-    console.log(`Role command used by ${interaction.user.tag} in ${guild.name} to ${role}.`)
+    if (!guildAssignables) {
+        console.error(`No assignable roles found for server ${interaction.guild.name}.`)
+        interaction.reply("No assignable roles found for this server.")
+        return
+    }
+
+    console.log(`Role command used by ${interaction.user.tag} in ${interaction.guild.name} with roleId ${role}.`)
 
     if (!member) {
         console.error(`No member matching ${interaction.user.id} was found.`)
@@ -61,7 +80,7 @@ const execute = async (interaction) => {
         return
     }
 
-    if (global.assignableRoles.filter(r => r.value === role).length === 0) {
+    if (guildAssignables.filter(r => r.value === role).length === 0) {
         console.error(`The ${roleToAdd.name} role is not assignable.`)
         interaction.reply(`The \`${roleToAdd.name}\` role is not assignable.`)
         return

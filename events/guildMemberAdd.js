@@ -1,5 +1,8 @@
 const { Events } = require("discord.js")
 const { sendMessage } = require("../utils")
+const dotenv = require("dotenv")
+
+dotenv.config()
 
 /**
  * @typedef {import("discord.js").GuildMember} GuildMember
