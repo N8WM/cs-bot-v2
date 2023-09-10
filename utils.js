@@ -5,6 +5,7 @@ const path = require("node:path")
  * @typedef {import("discord.js").Guild} Guild
  * @typedef {import("discord.js").Snowflake} Snowflake
  * @typedef {import("discord.js").Message} Message
+ * @typedef {import("discord.js").Client} Client
  */
 
 /**
@@ -74,4 +75,28 @@ const sendMessage = async (guild, channelId, message) => {
   return result
 }
 
-module.exports = { itemHandler, sendMessage }
+/**
+ * Updates the global assignableRoles array.
+ * @function updateAssignableRoleCache
+ * @param {Client} client - The client to use to fetch the guilds.
+ * @returns {Promise<void>}
+ */
+const updateAssignableRoleCache = (client) => {
+  global.assignableRoles = []
+  return client.guilds.fetch().then(oa2guilds => {
+    oa2guilds.forEach(oa2guild => {
+      oa2guild.fetch().then(guild => {
+        guild.roles.fetch().then(roles => {
+          roles.forEach(role => {
+            let roleRegexStr = process.env.COURSE_ROLES_REGEXP + "|" + process.env.MISC_ROLES_REGEXP
+            let roleRegex = new RegExp(roleRegexStr)
+            if (roleRegex.test(role.name)) global.assignableRoles.push({ name: role.name, value: role.id })
+          })
+        }).catch(console.error)
+      }).catch(console.error)
+    })
+  }).catch(console.error)
+}
+
+
+module.exports = { itemHandler, sendMessage, updateAssignableRoleCache }

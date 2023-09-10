@@ -1,12 +1,9 @@
 const { Events } = require("discord.js")
 const { sendMessage } = require("../utils")
-const dotenv = require("dotenv")
 
 /**
  * @typedef {import("discord.js").GuildMember} GuildMember
  */
-
-dotenv.config()
 
 const name = Events.GuildMemberRemove
 

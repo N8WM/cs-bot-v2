@@ -16,7 +16,6 @@ const client = new Client({
   ]
 })
 
-
 global.commands = new Collection()
 
 // Load all commands
