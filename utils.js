@@ -2,6 +2,7 @@ const fs = require("node:fs")
 const path = require("node:path")
 
 /**
+ * @typedef {import("discord.js").Channel} Channel
  * @typedef {import("discord.js").Guild} Guild
  * @typedef {import("discord.js").Snowflake} Snowflake
  * @typedef {import("discord.js").Message} Message
@@ -63,12 +64,16 @@ const itemHandler = (dirName, callback) => {
  * @returns {Promise<Message|null>} - The message that was sent, or null if the channel does not exist.
  */
 const sendMessage = async (guild, channelId, message) => {
-  /** @type {any} */
+  /** @type {Channel|void} */
   const channel = await guild.channels
     .fetch(channelId)
     .catch(console.error)
   if (!channel) {
     console.error(`The channel with ID ${channelId} does not exist.`)
+    return null
+  }
+  if (!channel.isTextBased()) {
+    console.error(`The channel with ID ${channelId} is not a text channel.`)
     return null
   }
   const result = channel.send(message)
