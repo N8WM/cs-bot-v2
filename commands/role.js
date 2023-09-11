@@ -17,6 +17,7 @@ const data = new SlashCommandBuilder()
             .setRequired(true)
             .setAutocomplete(true)
     )
+    .setDMPermission(false)
 
 /**
  * The function to autocomplete the role option.

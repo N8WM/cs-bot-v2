@@ -23,6 +23,10 @@ dotenv.config()
  * @returns {GuildGlobals} - The global variables for the guild.
  */
 const getGuildGlobals = (guild) => {
+  if (!guild) {
+    console.error("No guild provided.")
+    return null
+  }
   /** @type {GuildsGlobals} */
   const guildsGlobals = global.guildsGlobals
   return guildsGlobals.get(guild.id)
@@ -37,6 +41,10 @@ const getGuildGlobals = (guild) => {
  * @returns {void}
  */
 const setGuildGlobal = (guild, key, value) => {
+  if (!guild) {
+    console.error("No guild provided.")
+    return
+  }
   /** @type {GuildsGlobals} */
   const guildsGlobals = global.guildsGlobals
   let guildGlobals = guildsGlobals.get(guild.id)

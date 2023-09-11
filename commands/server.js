@@ -7,6 +7,7 @@ const { SlashCommandBuilder } = require("discord.js")
 const data = new SlashCommandBuilder()
   .setName("server")
   .setDescription("Provides information about the server.")
+  .setDMPermission(false)
 
 /**
  * The function to execute when the command is used.
