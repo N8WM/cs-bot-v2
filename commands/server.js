@@ -17,7 +17,7 @@ const data = new SlashCommandBuilder()
 const execute = async (interaction) => {
   await interaction.reply(
     `This server is ${interaction.guild.name} and has ${interaction.guild.memberCount} members.`
-  )
+  ).catch(console.error)
 }
 
 module.exports = {

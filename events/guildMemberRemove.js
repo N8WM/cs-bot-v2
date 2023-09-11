@@ -18,7 +18,7 @@ const name = Events.GuildMemberRemove
  */
 const execute = async (member) => {
   const goodbyeMsgStr = `Farewell, ${member}. Best of luck moving forward!`
-  const message = await sendMessage(member.guild, process.env.WELCOME_CHANNEL_ID, goodbyeMsgStr)
+  const message = await sendMessage(member.guild, process.env.WELCOME_CHANNEL_ID, goodbyeMsgStr).catch(console.error)
   if (!message) return
   await message.react("🫡").catch(console.error)
 }

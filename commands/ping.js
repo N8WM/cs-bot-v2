@@ -15,7 +15,7 @@ const data = new SlashCommandBuilder()
  * @returns {Promise<void>}
  */
 const execute = async (interaction) => {
-  await interaction.reply("Pong!")
+  await interaction.reply("Pong!").catch(console.error)
 }
 
 module.exports = {

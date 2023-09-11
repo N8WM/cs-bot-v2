@@ -18,7 +18,7 @@ const name = Events.GuildMemberAdd
  */
 const execute = async (member) => {
   const welcomeMsgStr = `Welcome, ${member}! Please read the rules, then assign your course roles in <#${process.env.ROLES_CHANNEL_ID}> to gain access to course channels.`
-  const message = await sendMessage(member.guild, process.env.WELCOME_CHANNEL_ID, welcomeMsgStr)
+  const message = await sendMessage(member.guild, process.env.WELCOME_CHANNEL_ID, welcomeMsgStr).catch(console.error)
   if (!message) return
   await message.react("👋").catch(console.error)
 }

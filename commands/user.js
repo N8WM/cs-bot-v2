@@ -17,7 +17,7 @@ const data = new SlashCommandBuilder()
 const execute = async (interaction) => {
   await interaction.reply(
     `This command was run by ${interaction.user.displayName}.`
-  )
+  ).catch(console.error)
 }
 
 module.exports = {
