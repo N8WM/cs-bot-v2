@@ -2,7 +2,7 @@ const { Events } = require("discord.js")
 
 /**
  * @typedef {import("discord.js").BaseInteraction} BaseInteraction
- * @typedef {import("discord.js").CommandInteraction} CommandInteraction
+ * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction
  * @typedef {import("discord.js").AutocompleteInteraction} AutocompleteInteraction
  */
 

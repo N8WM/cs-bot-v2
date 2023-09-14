@@ -1,8 +1,8 @@
 const { SlashCommandBuilder } = require("discord.js")
-const { getGuildGlobals } = require("../utils")
+const { getGuildGlobals, searchSort } = require("../utils")
 
 /**
- * @typedef {import("discord.js").CommandInteraction} CommandInteraction
+ * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction
  * @typedef {import("discord.js").AutocompleteInteraction} AutocompleteInteraction
  * @typedef {import("discord.js").GuildManager} GuildManager
  * @typedef {import("discord.js").Collection<string, [{ name: string, value: string }]>} RoleCollection
@@ -38,7 +38,11 @@ const autocomplete = async (interaction) => {
     const filtered = guildAssignables.filter(
         role => role.name.toLowerCase().includes(focusedValue.toLowerCase())
     )
-    await interaction.respond(filtered).catch(console.error)
+
+    const order = searchSort(focusedValue, filtered.map(role => role.name))
+    const sorted = order.map(item => filtered[item])
+
+    await interaction.respond(sorted).catch(console.error)
 }
 
 /**

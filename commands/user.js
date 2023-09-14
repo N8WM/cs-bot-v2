@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require("discord.js")
 
 /**
- * @typedef {import("discord.js").CommandInteraction} CommandInteraction
+ * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction
  */
 
 const data = new SlashCommandBuilder()
