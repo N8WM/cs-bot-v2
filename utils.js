@@ -214,7 +214,9 @@ const generateRoleColor = async (guild, maxAttempts = 25, minDeltaE = 5) => {
   const predefinedColors = roles
     .filter((r) => !isCourseRole(r))
     .map((r) => chroma(r.color))
-  predefinedColors.push(chroma(0))
+  predefinedColors.push(chroma("#000000"))
+  predefinedColors.push(chroma("#35393e"))
+  predefinedColors.push(chroma("#ffffff"))
   let attempts = 0
   let color = randomColor()
   while (isTooSimilar(predefinedColors, color) && attempts < maxAttempts) {

@@ -47,6 +47,10 @@ const data = new SlashCommandBuilder()
       )
   )
   .addSubcommand(subcommand =>
+    subcommand.setName("removeall")
+      .setDescription("Remove all courses from the server roster")
+  )
+  .addSubcommand(subcommand =>
     subcommand.setName("clear")
       .setDescription("Clear a course's message history")
       .addStringOption(option =>
@@ -55,6 +59,10 @@ const data = new SlashCommandBuilder()
           .setAutocomplete(true)
           .setRequired(true)
       )
+  )
+  .addSubcommand(subcommand =>
+    subcommand.setName("clearall")
+      .setDescription("Clear all courses' message history")
   )
   .setDefaultMemberPermissions(
     PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageRoles
@@ -258,21 +266,16 @@ const addCourse = async (interaction) => {
 /**
  * Remove a course from server roster
  * @async
- * @function removeCourse
+ * @function removeCourseWithRoleId
  * @param {CommandInteraction} interaction
- * @returns {Promise<void>}
+ * @param {string} roleId
+ * @returns {Promise<boolean>} - Whether the course was successfully removed
  */
-const removeCourse = async (interaction) => {
-  const deferred = await interaction.deferReply({
-    ephemeral: true
-  }).catch(console.error)
-  if (!deferred) return
-
-  const roleId = interaction.options.get("alias").value.toString()
+const removeCourseWithRoleId = async (interaction, roleId) => {
   const guildGlobals = getGuildGlobals(interaction.guild)
 
   const {role, category, courseChannels} = await getInteractionCourseItems(interaction, roleId)
-  if (!role || !category || !courseChannels) return
+  if (!role || !category || !courseChannels) return false
 
   // Delete role, category, and channels
   /** @type {string[]} */
@@ -306,7 +309,7 @@ const removeCourse = async (interaction) => {
       .send(failureMessage)
       .catch(console.error)
     console.log(failureMessage)
-    return
+    return false
   }
 
   await interaction
@@ -317,7 +320,170 @@ const removeCourse = async (interaction) => {
     .send(`Course \`${role.name}\` removed by ${interaction.user}.`)
     .catch(console.error)
   
-    console.log(`Roster remove command used by ${interaction.user.tag} in ${interaction.guild.name} with roleId ${role.id}.`)
+  console.log(`Roster remove command used by ${interaction.user.tag} in ${interaction.guild.name} with roleId ${role.id}.`)
+  return true
+}
+
+/**
+ * Remove a course from server roster
+ * @async
+ * @function removeCourse
+ * @param {CommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+const removeCourse = async (interaction) => {
+  const deferred = await interaction.deferReply({
+    ephemeral: true
+  }).catch(console.error)
+  if (!deferred) return
+
+  const roleId = interaction.options.get("alias").value.toString()
+  await removeCourseWithRoleId(interaction, roleId)
+}
+
+/**
+ * Remove all courses from server roster
+ * @async
+ * @function removeAllCourses
+ * @param {CommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+const removeAllCourses = async (interaction) => {
+  const deferred = await interaction.deferReply({
+    ephemeral: true
+  }).catch(console.error)
+  if (!deferred) return
+
+  const guildGlobals = getGuildGlobals(interaction.guild)
+  const assignableRoles = guildGlobals.assignableRoles
+
+  const courseRoles = [...assignableRoles].filter(r => r.type === "course")
+
+  let complete = true
+  courseRoles.forEach(async r => {
+    const resp = await removeCourseWithRoleId(interaction, r.value).catch(console.error)
+    complete = resp && complete
+  })
+
+  if (!complete) {
+    await interaction
+      .editReply(`Removal of all courses incomplete!`)
+      .catch(console.error)
+    console.log(`Removal of all courses incomplete!`)
+    return
+  }
+
+  await interaction
+    .editReply(`Success!`)
+    .catch(console.error)
+
+  console.log(`Roster removeall command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
+}
+
+/**
+ * Clear a course's message history
+ * @async
+ * @function clearCourseWithRoleId
+ * @param {CommandInteraction} interaction
+ * @param {string} roleId
+ * @returns {Promise<boolean>} - Whether the course was successfully cleared
+ */
+const clearCourseWithRoleId = async (interaction, roleId) => {
+  const {role, category, courseChannels} = await getInteractionCourseItems(interaction, roleId)
+  if (!role || !category || !courseChannels) return
+
+  // Cache members
+  await interaction.guild.members.fetch().catch(console.error)
+  // Get members with role (excluding bots)
+  const membersWithRole = role.members.filter(m => !m.user.bot)
+
+  // Clear text channel (replace with new channel)
+  const oldTextChannel = courseChannels.find(c => c.type === ChannelType.GuildText)
+  if (!oldTextChannel || oldTextChannel.type !== ChannelType.GuildText) {
+    await interaction
+      .editReply(`Failed to find text channel for ${role}.`)
+      .catch(console.error)
+    console.log(`Failed to find text channel for role with id ${role.id}.`)
+    return false
+  }
+
+  const newTextChannel = await interaction.guild.channels.create({
+    name: oldTextChannel.name,
+    type: ChannelType.GuildText,
+    parent: category,
+    topic: oldTextChannel.topic,
+    position: oldTextChannel.position
+  }).catch(console.error)
+
+  if (!newTextChannel) {
+    await interaction
+      .editReply(`Failed to create new text channel for ${role}.`)
+      .catch(console.error)
+    console.log(`Failed to create new text channel for role with id ${role.id}.`)
+    return false
+  }
+
+  // Clear voice channel (replace with new channel)
+  const oldVoiceChannel = courseChannels.find(c => c.type === ChannelType.GuildVoice)
+  if (!oldVoiceChannel || oldVoiceChannel.type !== ChannelType.GuildVoice) {
+    await interaction
+      .editReply(`Failed to find voice channel for ${role}.`)
+      .catch(console.error)
+    console.log(`Failed to find voice channel for role with id ${role.id}.`)
+    return false
+  }
+
+  const newVoiceChannel = await interaction.guild.channels.create({
+    name: oldVoiceChannel.name,
+    type: ChannelType.GuildVoice,
+    parent: category,
+    position: oldVoiceChannel.position
+  }).catch(console.error)
+
+  if (!newVoiceChannel) {
+    await interaction
+      .editReply(`Failed to create new voice channel for ${role}.`)
+      .catch(console.error)
+    console.log(`Failed to create new voice channel for role with id ${role.id}.`)
+    return false
+  }
+
+  // Delete old channels
+  /** @type {string[]} */
+  const failures = []
+
+  const deletedTextChannel = await oldTextChannel.delete().catch(console.error)
+  if (!deletedTextChannel) failures.push(`**ERROR** Failed to delete old text channel for ${role}. Please delete it manually.`)
+  const deletedVoiceChannel = await oldVoiceChannel.delete().catch(console.error)
+  if (!deletedVoiceChannel) failures.push(`**ERROR** Failed to delete old voice channel for ${role}. Please delete it manually.`)
+  membersWithRole.forEach(async m => {
+    const removedMember = await m.roles.remove(role).catch(console.error)
+    if (!removedMember) failures.push(`**ERROR** Failed to remove ${m} from ${role}. Please remove them manually.`)
+  })
+
+  if (failures.length > 0) {
+    const failureMessage = failures.join("\n")
+    await interaction
+      .editReply(`Clearing of ${role.name} incomplete!`)
+      .catch(console.error)
+    console.log(`Clearing of ${role.name} incomplete!`)
+    await interaction.channel
+      .send(failureMessage)
+      .catch(console.error)
+    console.log(failureMessage)
+    return false
+  }
+
+  await interaction
+    .editReply(`Success!`)
+    .catch(console.error)
+
+  await interaction.channel
+    .send(`Course ${role} cleared by ${interaction.user}.`)
+    .catch(console.error)
+
+  console.log(`Roster clear command used by ${interaction.user.tag} in ${interaction.guild.name} with roleId ${role.id}.`)
+  return true
 }
 
 /**
@@ -334,80 +500,38 @@ const clearCourse = async (interaction) => {
   if (!deferred) return
 
   const roleId = interaction.options.get("alias").value.toString()
-  
-  const {role, category, courseChannels} = await getInteractionCourseItems(interaction, roleId)
-  if (!role || !category || !courseChannels) return
+  await clearCourseWithRoleId(interaction, roleId)
+}
 
-  // Clear text channel (replace with new channel)
-  const oldChannel = courseChannels.find(c => c.type === ChannelType.GuildText)
-  if (!oldChannel || oldChannel.type !== ChannelType.GuildText) {
-    await interaction
-      .editReply(`Failed to find text channel for ${role}.`)
-      .catch(console.error)
-    console.log(`Failed to find text channel for role with id ${role.id}.`)
-    return
-  }
-
-  const newChannel = await interaction.guild.channels.create({
-    name: oldChannel.name,
-    type: ChannelType.GuildText,
-    parent: category,
-    topic: oldChannel.topic,
-    position: oldChannel.position
+/**
+ * Clear all courses' message history
+ * @async
+ * @function clearAllCourses
+ * @param {CommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+const clearAllCourses = async (interaction) => {
+  const deferred = await interaction.deferReply({
+    ephemeral: true
   }).catch(console.error)
+  if (!deferred) return
 
-  if (!newChannel) {
+  const guildGlobals = getGuildGlobals(interaction.guild)
+  const assignableRoles = guildGlobals.assignableRoles
+
+  const courseRoles = [...assignableRoles].filter(r => r.type === "course")
+
+  let complete = true
+  courseRoles.forEach(async r => {
+    const resp = await clearCourseWithRoleId(interaction, r.value).catch(console.error)
+    complete = resp && complete
+  })
+
+  if (!complete) {
     await interaction
-      .editReply(`Failed to create new text channel for ${role}.`)
+      .editReply(`Clearing of all courses incomplete!`)
       .catch(console.error)
-    console.log(`Failed to create new text channel for role with id ${role.id}.`)
-    return
-  }
-
-  // Clear voice channel (replace with new channel)
-  const oldVoiceChannel = courseChannels.find(c => c.type === ChannelType.GuildVoice)
-  if (!oldVoiceChannel || oldVoiceChannel.type !== ChannelType.GuildVoice) {
-    await interaction
-      .editReply(`Failed to find voice channel for ${role}.`)
-      .catch(console.error)
-    console.log(`Failed to find voice channel for role with id ${role.id}.`)
-    return
-  }
-
-  const newVoiceChannel = await interaction.guild.channels.create({
-    name: oldVoiceChannel.name,
-    type: ChannelType.GuildVoice,
-    parent: category,
-    position: oldVoiceChannel.position
-  }).catch(console.error)
-
-  if (!newVoiceChannel) {
-    await interaction
-      .editReply(`Failed to create new voice channel for ${role}.`)
-      .catch(console.error)
-    console.log(`Failed to create new voice channel for role with id ${role.id}.`)
-    return
-  }
-
-  // Delete old channels
-  /** @type {string[]} */
-  const failures = []
-
-  const deletedTextChannel = await oldChannel.delete().catch(console.error)
-  if (!deletedTextChannel) failures.push(`**ERROR** Failed to delete old text channel for ${role}. Please delete it manually.`)
-  const deletedVoiceChannel = await oldVoiceChannel.delete().catch(console.error)
-  if (!deletedVoiceChannel) failures.push(`**ERROR** Failed to delete old voice channel for ${role}. Please delete it manually.`)
-
-  if (failures.length > 0) {
-    const failureMessage = failures.join("\n")
-    await interaction
-      .editReply(`Clearing of ${role.name} incomplete!`)
-      .catch(console.error)
-    console.log(`Clearing of ${role.name} incomplete!`)
-    await interaction.channel
-      .send(failureMessage)
-      .catch(console.error)
-    console.log(failureMessage)
+    console.log(`Clearing of all courses incomplete!`)
     return
   }
 
@@ -415,11 +539,7 @@ const clearCourse = async (interaction) => {
     .editReply(`Success!`)
     .catch(console.error)
 
-  await interaction.channel
-    .send(`Course ${role} cleared by ${interaction.user}.`)
-    .catch(console.error)
-
-  console.log(`Roster clear command used by ${interaction.user.tag} in ${interaction.guild.name} with roleId ${role.id}.`)
+  console.log(`Roster clearall command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -440,8 +560,14 @@ const execute = async (interaction) => {
     case "remove":
       await removeCourse(interaction)
       break
+    case "removeall":
+      await removeAllCourses(interaction)
+      break
     case "clear":
       await clearCourse(interaction)
+      break
+    case "clearall":
+      await clearAllCourses(interaction)
       break
     default:
       await interaction.reply({
