@@ -4,7 +4,6 @@ const {
   generateRoleColor,
   getInteractionCourseItems,
   searchSort,
-  isCourseRole,
   updateAssignableRoleCache
 } = require("../utils")
 const dotenv = require("dotenv")
@@ -196,7 +195,7 @@ const addChannels = async (interaction, alias, role) => {
 
   // Create new text and voice channels
   const newTextChannel = await interaction.guild.channels.create({
-    name: `${parseInt(alias)}-general`,
+    name: `general-${parseInt(alias)}`,
     type: ChannelType.GuildText,
     parent: newCategory,
     topic: `General discussion for ${alias}`
@@ -213,7 +212,7 @@ const addChannels = async (interaction, alias, role) => {
   }
 
   const newVoiceChannel = await interaction.guild.channels.create({
-    name: `${parseInt(alias)}-voice`,
+    name: `voice-${parseInt(alias)}`,
     type: ChannelType.GuildVoice,
     parent: newCategory,
     topic: `Voice chat for ${alias}`
