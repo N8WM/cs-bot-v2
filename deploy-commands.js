@@ -27,29 +27,17 @@ const rest = new REST().setToken(process.env.BOT_TOKEN);
       `Started refreshing ${commands.length} application (/) commands.`
     )
 
-    // Refresh all commands in the guild with the current set
-    const isGlobalDeploy = process.argv.length > 2 && ["--global", "-g"].includes(process.argv[2])
-    /** @type {any} */
-    let data = null
-    if (isGlobalDeploy) {
-      data = await rest.put(
-        Routes.applicationCommands(
-          process.env.CLIENT_ID
-        ),
-        { body: commands }
-      )
-    } else {
-      data = await rest.put(
-        Routes.applicationGuildCommands(
-          process.env.CLIENT_ID,
-          process.env.GUILD_ID
-        ),
-        { body: commands }
-      )
-    }
+    // Refresh all commands globally
+    /** @type { any } */
+    const data = await rest.put(
+      Routes.applicationCommands(
+        process.env.CLIENT_ID
+      ),
+      { body: commands }
+    )
 
     console.log(
-      `Successfully reloaded ${data.length} application (/) commands${isGlobalDeploy ? " globally" : ""}.`
+      `Successfully reloaded ${data.length} application (/) commands globally.`
     )
   } catch (error) {
     console.error(error)

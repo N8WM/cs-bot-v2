@@ -1,8 +1,9 @@
-const { ChannelType } = require("discord.js")
+const { ChannelType, EmbedBuilder } = require("discord.js")
 const chroma = require("chroma-js")
 const fs = require("node:fs")
 const path = require("node:path")
 const dotenv = require("dotenv")
+const { get } = require("node:http")
 
 dotenv.config()
 
@@ -14,9 +15,17 @@ dotenv.config()
  * @typedef {import("discord.js").Snowflake} Snowflake
  * @typedef {import("discord.js").Message} Message
  * @typedef {import("discord.js").Client} Client
+ * @typedef {import("discord.js").GuildMember} GuildMember
  * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction
  * @typedef {{ name: string, value: string, type: "course"|"misc" }} AssignableRole
- * @typedef {{ assignableRoles?: AssignableRole[] }} GuildGlobals
+ * @typedef {{
+ *   welcomeChannelId?: string,
+ *   welcomeMessage?: string,
+ *   goodbyeMessage?: string,
+ *   moreAssignables?: string,
+ *   baseRolePos?: string
+ * }} Config
+ * @typedef {{ assignableRoles?: AssignableRole[], config: Config }} GuildGlobals
  * @typedef {import("discord.js").Collection<string, GuildGlobals>} GuildsGlobals
  * @typedef {import("discord.js").Collection<string, Channel>} RoleCollection
  * @typedef {import("discord.js").ColorResolvable} ColorResolvable
@@ -35,6 +44,12 @@ const getGuildGlobals = (guild) => {
   }
   /** @type {GuildsGlobals} */
   const guildsGlobals = global.guildsGlobals
+  let guildGlobals = guildsGlobals.get(guild.id)
+  if (!guildGlobals) {
+    guildsGlobals.set(guild.id, {config: {}})
+    guildGlobals = guildsGlobals.get(guild.id)
+  }
+
   return guildsGlobals.get(guild.id)
 }
 
@@ -56,7 +71,7 @@ const setGuildGlobal = (guild, key, value) => {
   let guildGlobals = guildsGlobals.get(guild.id)
 
   if (!guildGlobals) {
-    guildsGlobals.set(guild.id, {})
+    guildsGlobals.set(guild.id, {config: {}})
     guildGlobals = guildsGlobals.get(guild.id)
   }
 
@@ -321,6 +336,150 @@ const getInteractionCourseItems = async (interaction, roleId) => {
   return {role, category, courseChannels}
 }
 
+/**
+ * Generates an embed with the current server configuration
+ * @function generateConfigEmbed
+ * @param {Guild} guild
+ * @param {GuildMember?} user
+ * @returns {EmbedBuilder}
+ */
+const generateConfigEmbed = (guild, user=null) => {
+  const guildConfig = getGuildGlobals(guild).config
+  const embed = new EmbedBuilder()
+    .setTitle(process.env.CONFIG_EMBED_TITLE)
+    .setDescription(`Configuration for ${guild.name}`)
+    .setThumbnail(guild.iconURL())
+    .setColor("#0099FF")
+    .addFields(
+      ...Object.keys(guildConfig).map(key => ({
+        name: key,
+        value: guildConfig[key] ? `\`${guildConfig[key]}\`` : null
+      }))
+    )
+
+  if (user) embed
+    .setFooter({ text: `${user.displayName}`, iconURL: user.avatarURL() })
+    .setTimestamp()
+
+  return embed
+}
+
+/**
+ * Finds the guild config embed message and returns it.
+ * @async
+ * @function getConfigMessage
+ * @param {Guild} guild - The guild to get the config embed for.
+ * @returns {Promise<Message|null>} - The config embed message, or null if it does not exist.
+ */
+const getConfigMessage = async (guild) => {
+  const channels = await guild.channels.fetch().catch(console.error)
+  if (!channels) {
+    console.error("Failed to load channels.")
+    return null
+  }
+
+  const configChannel = channels.find(c =>
+    (c.type === ChannelType.GuildText)
+    && (c.name.toLowerCase() === process.env.CONFIG_CHANNEL_NAME.toLowerCase())
+  )
+
+  if (!configChannel || configChannel.type !== ChannelType.GuildText) {
+    console.error(`Failed to find config channel ${process.env.CONFIG_CHANNEL_NAME} in guild ${guild.name}.`)
+    return null
+  }
+
+  const messages = await configChannel.messages.fetch().catch(console.error)
+  if (!messages) {
+    console.error("Failed to load messages.")
+    return null
+  }
+
+  const configMessage = messages.find(m =>
+    m.author.id === guild.client.user.id
+    && m.embeds.length > 0
+    && m.embeds[0].title === process.env.CONFIG_EMBED_TITLE
+  )
+
+  if (!configMessage) {
+    console.error(`Failed to find config message in guild ${guild.name}.`)
+    return null
+  }
+
+  return configMessage
+}
+
+/**
+ * Parses the guild config and sets the global config variables for the guild.
+ * @async
+ * @function parseGuildConfig
+ * @param {Guild} guild - The guild to parse the config for.
+ * @returns {Promise<void>}
+ */
+const parseGuildConfig = async (guild) => {
+  const configMessage = await getConfigMessage(guild)
+  if (!configMessage) return
+  
+  const configEmbed = configMessage.embeds[0]
+  try {
+    /** @type { Config } */
+    const config = {}
+    configEmbed.fields.forEach(field => {
+      config[field.name] = field.value ? field.value.substring(1, field.value.length - 1) : null
+    })
+    setGuildGlobal(guild, "config", config)
+  } catch (error) {
+    console.error(`Failed to parse config message in guild ${guild.name}: ${error.message}`)
+  }
+
+  console.log(getGuildGlobals(guild).config)
+}
+
+/**
+ * Updates the guild config embed.
+ * @async
+ * @function updateConfigEmbed
+ * @param {Guild} guild - The guild to update the config embed for.
+ * @returns {Promise<void>}
+ */
+const updateConfigEmbed = async (guild) => {
+  const configMessage = await getConfigMessage(guild)
+  if (!configMessage) return
+
+  const newEmbed = generateConfigEmbed(guild)
+  const edit = await configMessage.edit({ embeds: [newEmbed] }).catch(console.error)
+  if (!edit) {
+    console.error(`Failed to edit config message in guild ${guild.name}.`)
+    return
+  }
+}
+
+/**
+ * Creates the config channel for a guild and sends the config embed.
+ * @async
+ * @function createConfigChannel
+ * @param {Guild} guild - The guild to create the config channel for.
+ * @returns {Promise<void>}
+ */
+const createConfigChannel = async (guild) => {
+  const configChannel = await guild.channels.create({
+    name: process.env.CONFIG_CHANNEL_NAME,
+    type: ChannelType.GuildText,
+    topic: "This channel is used to configure the bot.",
+  }).catch(console.error)
+  if (!configChannel) {
+    console.error(`Failed to create config channel for ${guild.name}`)
+    return
+  }
+
+  const embed = generateConfigEmbed(guild)
+  if (!embed) {
+    console.error(`Failed to generate config embed for ${guild.name}`)
+    return
+  }
+
+  await configChannel.send({ embeds: [embed] }).catch(console.error)
+}
+
 module.exports = { 
   getGuildGlobals,
   setGuildGlobal,
@@ -331,5 +490,10 @@ module.exports = {
   updateAssignableRoleCache,
   generateRoleColor,
   searchSort,
-  getInteractionCourseItems
+  getInteractionCourseItems,
+  generateConfigEmbed,
+  getConfigMessage,
+  parseGuildConfig,
+  updateConfigEmbed,
+  createConfigChannel
 }

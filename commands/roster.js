@@ -542,14 +542,13 @@ const clearAllCourses = async (interaction) => {
 }
 
 /**
- * Add a course to server roster
+ * Make changes to the server roster
  * @async
  * @function execute
  * @param {CommandInteraction} interaction
  * @returns {Promise<void>}
  */
 const execute = async (interaction) => {
-  /** @type {string} */
   const subcommand = interaction.options.getSubcommand()
 
   switch (subcommand) {
