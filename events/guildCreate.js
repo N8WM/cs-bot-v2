@@ -1,5 +1,5 @@
-const { Events, ChannelType } = require("discord.js")
-const { createConfigChannel } = require("../utils")
+const { Events } = require("discord.js")
+const { setUpConfigChannel } = require("../utils/configuration")
 
 /**
  * @typedef {import("discord.js").Guild} Guild
@@ -16,7 +16,7 @@ const name = Events.GuildCreate
  */
 const execute = async (guild) => {
   console.log(`Joined guild: ${guild.name}`)
-  await createConfigChannel(guild)
+  await setUpConfigChannel(guild)
 }
 
 module.exports = {

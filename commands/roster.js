@@ -1,14 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js")
-const {
-  getGuildGlobals,
-  generateRoleColor,
-  getInteractionCourseItems,
-  searchSort,
-  updateAssignableRoleCache
-} = require("../utils")
-const dotenv = require("dotenv")
-
-dotenv.config()
+const { getGuildGlobals, updateAssignableRoleCache } = require("../utils/globals")
+const { generateRoleColor, getInteractionCourseItems, searchSort } = require("../utils/helpers")
 
 /**
  * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction
@@ -94,7 +86,7 @@ const addRole = async (interaction, alias) => {
     name: alias,
     color: await generateRoleColor(interaction.guild),
     mentionable: true,
-    position: parseInt(process.env.BASE_ROLE_POSITION)
+    position: parseInt(getGuildGlobals(interaction.guild).config.baseRolePos)
   }).catch(console.error)
 
   if (!role) {
@@ -129,7 +121,7 @@ const addChannels = async (interaction, alias, role) => {
     return
   }
 
-  const allowedRoles = allRoles.filter(r => 
+  const allowedRoles = allRoles.filter(r =>
     (r.permissions.bitfield & PermissionFlagsBits.ManageChannels)
     || (r.id === role.id)
   )
@@ -161,8 +153,8 @@ const addChannels = async (interaction, alias, role) => {
   // Set permissions for new category
   let newPerm = await newCategory.permissionOverwrites.create(
     interaction.guild.roles.everyone, {
-      ViewChannel: false
-    }
+    ViewChannel: false
+  }
   ).catch(console.error)
 
   if (!newPerm) {
@@ -178,8 +170,8 @@ const addChannels = async (interaction, alias, role) => {
   allowedRoles.forEach(async r => {
     newPerm = await newCategory.permissionOverwrites.create(
       r, {
-        ViewChannel: true
-      }
+      ViewChannel: true
+    }
     ).catch(console.error)
 
     if (!newPerm) {
@@ -258,7 +250,7 @@ const addCourse = async (interaction) => {
   await interaction.channel
     .send(`Course ${role} added by ${interaction.user}.`)
     .catch(console.error)
-  
+
   console.log(`Roster add command used by ${interaction.user.tag} in ${interaction.guild.name} with roleId ${role.id}.`)
 }
 
@@ -273,7 +265,7 @@ const addCourse = async (interaction) => {
 const removeCourseWithRoleId = async (interaction, roleId) => {
   const guildGlobals = getGuildGlobals(interaction.guild)
 
-  const {role, category, courseChannels} = await getInteractionCourseItems(interaction, roleId)
+  const { role, category, courseChannels } = await getInteractionCourseItems(interaction, roleId)
   if (!role || !category || !courseChannels) return false
 
   // Delete role, category, and channels
@@ -318,7 +310,7 @@ const removeCourseWithRoleId = async (interaction, roleId) => {
   await interaction.channel
     .send(`Course \`${role.name}\` removed by ${interaction.user}.`)
     .catch(console.error)
-  
+
   console.log(`Roster remove command used by ${interaction.user.tag} in ${interaction.guild.name} with roleId ${role.id}.`)
   return true
 }
@@ -388,7 +380,7 @@ const removeAllCourses = async (interaction) => {
  * @returns {Promise<boolean>} - Whether the course was successfully cleared
  */
 const clearCourseWithRoleId = async (interaction, roleId) => {
-  const {role, category, courseChannels} = await getInteractionCourseItems(interaction, roleId)
+  const { role, category, courseChannels } = await getInteractionCourseItems(interaction, roleId)
   if (!role || !category || !courseChannels) return
 
   // Cache members

@@ -1,5 +1,5 @@
 const { REST, Routes } = require("discord.js")
-const { itemHandler } = require("./utils")
+const { itemHandler } = require("./utils/helpers")
 const dotenv = require("dotenv")
 
 dotenv.config()

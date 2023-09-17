@@ -1,16 +1,12 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("discord.js")
-const { getGuildGlobals, setGuildGlobal, generateConfigEmbed } = require("../utils")
-const dotenv = require("dotenv")
-
-dotenv.config()
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js")
+const { generateConfigEmbed, setUpConfigChannel, updateConfigEmbed } = require("../utils/configuration")
+const { getGuildGlobals } = require("../utils/globals")
 
 /**
  * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction
  * @typedef {import("discord.js").Guild} Guild
  * @typedef {import("discord.js").GuildMember} GuildMember
  */
-
-const unconfigured = "unconfigured"
 
 const data = new SlashCommandBuilder()
   .setName("config")
@@ -29,7 +25,7 @@ const data = new SlashCommandBuilder()
       .setDescription("Set the welcome message for the server")
       .addStringOption(option =>
         option.setName("message")
-          .setDescription("The message to set as the welcome message")
+          .setDescription("The welcome message; can use the \"{user}\" macro")
           .setRequired(true)
       )
   )
@@ -38,13 +34,13 @@ const data = new SlashCommandBuilder()
       .setDescription("Set the goodbye message for the server")
       .addStringOption(option =>
         option.setName("message")
-          .setDescription("The message to set as the goodbye message")
+          .setDescription("The goodbye message; can use the \"{user}\" macro")
           .setRequired(true)
       )
   )
   .addSubcommand(subcommand =>
     subcommand.setName("more-assignables")
-      .setDescription("Set the regex string matching additional assignable roles on the server (not including course roles)")
+      .setDescription("Set the regex string matching additional assignable roles")
       .addStringOption(option =>
         option.setName("regex")
           .setDescription("The regex string for the additional assignable roles")
@@ -56,7 +52,7 @@ const data = new SlashCommandBuilder()
       .setDescription("Set the base position of newly created assignable roles")
       .addIntegerOption(option =>
         option.setName("position")
-          .setDescription("The value of the base position for newly created assignable roles")
+          .setDescription("Value of the base position")
           .setMinValue(1)
           .setRequired(true)
       )
@@ -64,6 +60,10 @@ const data = new SlashCommandBuilder()
   .addSubcommand(subcommand =>
     subcommand.setName("show")
       .setDescription("Show the current server configuration")
+  )
+  .addSubcommand(subcommand =>
+    subcommand.setName("init")
+      .setDescription("Initialize the server configuration")
   )
   .setDefaultMemberPermissions(
     PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageRoles
@@ -78,10 +78,33 @@ const data = new SlashCommandBuilder()
  * @returns {Promise<void>}
  */
 const setWelcomeChannel = async (interaction) => {
+  const channel = interaction.options.getChannel("channel")
+  if (channel.type !== ChannelType.GuildText) {
+    await interaction.reply({
+      content: "Invalid channel type.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
+  const guildConfig = getGuildGlobals(interaction.guild).config
+  guildConfig.welcomeChannelId = channel.id
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error)
+  const updated = await updateConfigEmbed(interaction.guild, member ? member : null)
+  if (!updated) {
+    await interaction.reply({
+      content: "Failed to update config embed.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
   await interaction.reply({
-    content: "This command is not yet implemented.",
+    content: `Welcome channel set to ${channel}.`,
     ephemeral: true
   }).catch(console.error)
+
+  console.log(`Config welcome-channel command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -92,10 +115,25 @@ const setWelcomeChannel = async (interaction) => {
  * @returns {Promise<void>}
  */
 const setWelcomeMessage = async (interaction) => {
+  const message = interaction.options.getString("message")
+  const guildConfig = getGuildGlobals(interaction.guild).config
+  guildConfig.welcomeMessage = message
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error)
+  const updated = await updateConfigEmbed(interaction.guild, member ? member : null)
+  if (!updated) {
+    await interaction.reply({
+      content: "Failed to update config embed.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
   await interaction.reply({
-    content: "This command is not yet implemented.",
+    content: `Welcome message set: \`\`\`${message}\`\`\``,
     ephemeral: true
   }).catch(console.error)
+
+  console.log(`Config welcome-message command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -106,10 +144,25 @@ const setWelcomeMessage = async (interaction) => {
  * @returns {Promise<void>}
  */
 const setGoodbyeMessage = async (interaction) => {
+  const message = interaction.options.getString("message")
+  const guildConfig = getGuildGlobals(interaction.guild).config
+  guildConfig.goodbyeMessage = message
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error)
+  const updated = await updateConfigEmbed(interaction.guild, member ? member : null)
+  if (!updated) {
+    await interaction.reply({
+      content: "Failed to update config embed.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
   await interaction.reply({
-    content: "This command is not yet implemented.",
+    content: `Goodbye message set: \`\`\`${message}\`\`\``,
     ephemeral: true
   }).catch(console.error)
+
+  console.log(`Config goodbye-message command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -121,10 +174,35 @@ const setGoodbyeMessage = async (interaction) => {
  * @returns {Promise<void>}
  */
 const setMoreAssignables = async (interaction) => {
+  const regex = interaction.options.getString("regex")
+  const guildConfig = getGuildGlobals(interaction.guild).config
+  guildConfig.moreAssignables = regex
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error)
+  const updated = await updateConfigEmbed(interaction.guild, member ? member : null)
+  if (!updated) {
+    await interaction.reply({
+      content: "Failed to update config embed.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
+  try {
+    new RegExp(regex)
+  } catch (error) {
+    await interaction.reply({
+      content: "Invalid regex.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
   await interaction.reply({
-    content: "This command is not yet implemented.",
+    content: `More assignables regex set to \`${regex}\`.`,
     ephemeral: true
   }).catch(console.error)
+
+  console.log(`Config more-assignables command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -135,10 +213,25 @@ const setMoreAssignables = async (interaction) => {
  * @returns {Promise<void>}
  */
 const setBaseRolePos = async (interaction) => {
+  const position = interaction.options.getInteger("position")
+  const guildConfig = getGuildGlobals(interaction.guild).config
+  guildConfig.baseRolePos = position.toString()
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error)
+  const updated = await updateConfigEmbed(interaction.guild, member ? member : null)
+  if (!updated) {
+    await interaction.reply({
+      content: "Failed to update config embed.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
   await interaction.reply({
-    content: "This command is not yet implemented.",
+    content: `Base role position set to ${position}.`,
     ephemeral: true
   }).catch(console.error)
+
+  console.log(`Config base-role-pos command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -153,6 +246,37 @@ const showEmbed = async (interaction) => {
   await interaction.reply({
     embeds: [embed]
   }).catch(console.error)
+}
+
+/**
+ * Initialize the server configuration
+ * @async
+ * @function init
+ * @param {CommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+const init = async (interaction) => {
+  const deferred = await interaction.deferReply({
+    ephemeral: true
+  }).catch(console.error)
+  if (!deferred) return
+
+  const initialized = await setUpConfigChannel(interaction.guild)
+  if (initialized === true) {
+    await interaction
+      .editReply("Server configuration initialized.")
+      .catch(console.error)
+  } else if (initialized === false) {
+    await interaction
+      .editReply("Server configuration already initialized.")
+      .catch(console.error)
+  } else {
+    await interaction
+      .editReply("Failed to initialize server configuration.")
+      .catch(console.error)
+  }
+
+  console.log(`Config init command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -183,12 +307,16 @@ const execute = async (interaction) => {
       break
     case "show":
       await showEmbed(interaction)
+      break
+    case "init":
+      await init(interaction)
+      break
     default:
       await interaction.reply({
         content: "Invalid subcommand.",
         ephemeral: true
       }).catch(console.error)
-    }
+  }
 }
 
 module.exports = {

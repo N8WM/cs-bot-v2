@@ -1,5 +1,7 @@
 const { Events, Collection } = require("discord.js")
-const { updateAssignableRoleCache, parseGuildConfig } = require("../utils")
+const { updateAssignableRoleCache } = require("../utils/globals")
+const { parseGuildConfig } = require("../utils/configuration")
+const cliProgress = require("cli-progress")
 
 /**
  * @typedef {import("discord.js").Client} Client
@@ -16,22 +18,35 @@ const once = true
  * @returns {Promise<void>}
  */
 const execute = async (client) => {
-  console.log(`Ready! Logged in as ${client.user.tag}`)
+  console.log(`Logged in as ${client.user.tag}`)
   global.guildsGlobals = new Collection()
-  await updateAssignableRoleCache(client)
   const guilds = await client.guilds.fetch().catch(console.error)
   if (!guilds) {
     console.error("Failed to fetch guilds")
     return
   }
+  const progressBar = new cliProgress.SingleBar(
+    {
+      format: "Loading guilds | [{bar}] {value}/{total}",
+      clearOnComplete: true
+    },
+    cliProgress.Presets.shades_classic
+  )
+  progressBar.start(guilds.size, 0)
   guilds.forEach(async guild => {
     const fetchedGuild = await guild.fetch().catch(console.error)
+    progressBar.increment(0.5)
     if (!fetchedGuild) {
       console.error(`Failed to fetch guild ${guild.name}`)
       return
     }
-    parseGuildConfig(fetchedGuild)
+    await parseGuildConfig(fetchedGuild)
+    progressBar.increment(0.5)
   })
+
+  await updateAssignableRoleCache(client)
+  progressBar.stop()
+  console.log(`Loaded ${guilds.size} guilds\nReady!`)
 }
 
 module.exports = {

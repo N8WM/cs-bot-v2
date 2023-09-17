@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require("discord.js")
-const { getGuildGlobals, searchSort } = require("../utils")
+const { getGuildGlobals } = require("../utils/globals")
+const { searchSort } = require("../utils/helpers")
 
 /**
  * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction

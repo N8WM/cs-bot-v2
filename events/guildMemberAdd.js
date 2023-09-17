@@ -1,8 +1,6 @@
 const { Events } = require("discord.js")
-const { sendMessage } = require("../utils")
-const dotenv = require("dotenv")
-
-dotenv.config()
+const { getGuildGlobals } = require("../utils/globals")
+const { sendMessage } = require("../utils/helpers")
 
 /**
  * @typedef {import("discord.js").GuildMember} GuildMember
@@ -17,8 +15,13 @@ const name = Events.GuildMemberAdd
  * @param {GuildMember} member - The member that has just joined the guild.
  */
 const execute = async (member) => {
-  const welcomeMsgStr = `Welcome, ${member}! Please read the rules, then assign your course roles in <#${process.env.ROLES_CHANNEL_ID}> to gain access to course channels.`
-  const message = await sendMessage(member.guild, process.env.WELCOME_CHANNEL_ID, welcomeMsgStr).catch(console.error)
+  const config = getGuildGlobals(member.guild).config
+  const welcomeMsgStr = config.welcomeMessage.replace(/{user}/g, `${member}`)
+  const message = await sendMessage(
+    member.guild,
+    config.welcomeChannelId,
+    welcomeMsgStr
+  ).catch(console.error)
   if (!message) return
   await message.react("👋").catch(console.error)
 }

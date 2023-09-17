@@ -1,8 +1,6 @@
 const { Events } = require("discord.js")
-const { sendMessage } = require("../utils")
-const dotenv = require("dotenv")
-
-dotenv.config()
+const { getGuildGlobals } = require("../utils/globals")
+const { sendMessage } = require("../utils/helpers")
 
 /**
  * @typedef {import("discord.js").GuildMember} GuildMember
@@ -17,8 +15,13 @@ const name = Events.GuildMemberRemove
  * @param {GuildMember} member - The member that has just left the guild.
  */
 const execute = async (member) => {
-  const goodbyeMsgStr = `Farewell, ${member}. Best of luck moving forward!`
-  const message = await sendMessage(member.guild, process.env.WELCOME_CHANNEL_ID, goodbyeMsgStr).catch(console.error)
+  const config = getGuildGlobals(member.guild).config
+  const goodbyeMsgStr = config.goodbyeMessage.replace(/{user}/g, `${member}`)
+  const message = await sendMessage(
+    member.guild,
+    config.welcomeChannelId,
+    goodbyeMsgStr
+  ).catch(console.error)
   if (!message) return
   await message.react("🫡").catch(console.error)
 }

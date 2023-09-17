@@ -6,8 +6,9 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "commands/*": ["commands/*"],
-      "events/*": ["events/*"]
+      "commands/*": ["./commands/*"],
+      "events/*": ["./events/*"],
+      "utils/*": ["./utils/*"]
     },
     "lib": ["ES6"]
   },
