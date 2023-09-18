@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js")
-const { getGuildGlobals, updateAssignableRoleCache } = require("../utils/globals")
+const { getGuildGlobals, updateGuildAssignableRoleCache } = require("../utils/globals")
 const { generateRoleColor, getInteractionCourseItems, searchSort } = require("../utils/helpers")
 
 /**
@@ -286,7 +286,7 @@ const removeCourseWithRoleId = async (interaction, roleId) => {
   )
   if (index < 0) {
     console.error(`Failed to remove role ${role.name} from assignableRoles. Reloading assignableRoles...`)
-    await updateAssignableRoleCache(interaction.client)
+    await updateGuildAssignableRoleCache(interaction.guild)
   }
   guildGlobals.assignableRoles.splice(index, 1)
 

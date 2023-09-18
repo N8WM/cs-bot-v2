@@ -8,6 +8,7 @@ const { isCourseRole, isMiscRole } = require("./validators")
  *   welcomeChannelId?: string,
  *   welcomeMessage: string,
  *   goodbyeMessage: string,
+ *   requestsChannelId?: string,
  *   moreAssignables?: string,
  *   baseRolePos: string
  * }} Config
@@ -20,6 +21,7 @@ const defaultConfig = {
   welcomeChannelId: null,
   welcomeMessage: "Welcome to the server, {user}!",
   goodbyeMessage: "Farewell, {user}!",
+  requestsChannelId: null,
   moreAssignables: null,
   baseRolePos: "1"
 }

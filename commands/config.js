@@ -39,6 +39,15 @@ const data = new SlashCommandBuilder()
       )
   )
   .addSubcommand(subcommand =>
+    subcommand.setName("requests-channel")
+      .setDescription("Set the requests channel for the server")
+      .addChannelOption(option =>
+        option.setName("channel")
+          .setDescription("The channel to set as the requests channel")
+          .setRequired(true)
+      )
+  )
+  .addSubcommand(subcommand =>
     subcommand.setName("more-assignables")
       .setDescription("Set the regex string matching additional assignable roles")
       .addStringOption(option =>
@@ -167,6 +176,43 @@ const setGoodbyeMessage = async (interaction) => {
   }).catch(console.error)
 
   console.log(`Config goodbye-message command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
+}
+
+/**
+ * Set the requests channel for the server
+ * @async
+ * @function setRequestsChannel
+ * @param {CommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+const setRequestsChannel = async (interaction) => {
+  const channel = interaction.options.getChannel("channel")
+  if (channel.type !== ChannelType.GuildText) {
+    await interaction.reply({
+      content: "Invalid channel type.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
+  const guildConfig = getGuildGlobals(interaction.guild).config
+  guildConfig.requestsChannelId = channel.id
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(console.error)
+  const updated = await updateConfigEmbed(interaction.guild, member ? member : null)
+  if (!updated) {
+    await interaction.reply({
+      content: "Failed to update config embed.",
+      ephemeral: true
+    }).catch(console.error)
+    return
+  }
+
+  await interaction.reply({
+    content: `Requests channel set to ${channel}.`,
+    ephemeral: true
+  }).catch(console.error)
+
+  console.log(`Config requests-channel command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -328,6 +374,9 @@ const execute = async (interaction) => {
       break
     case "more-assignables":
       await setMoreAssignables(interaction)
+      break
+    case "requests-channel":
+      await setRequestsChannel(interaction)
       break
     case "base-role-pos":
       await setBaseRolePos(interaction)
