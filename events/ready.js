@@ -52,6 +52,7 @@ const execute = async (client) => {
     console.error("Failed to fetch guilds")
     return
   }
+  console.log(`${guilds.size} guilds registered`)
   const progressBar = new cliProgress.SingleBar(
     {
       format: "Loading guilds | [{bar}] {value}/{total}",
@@ -59,6 +60,13 @@ const execute = async (client) => {
     },
     cliProgress.Presets.shades_classic
   )
+  if (guilds.size === 0) {
+    progressBar.start(1, 0)
+    progressBar.increment()
+    progressBar.stop()
+    console.log("[ Ready ]")
+    return
+  }
   progressBar.start(guilds.size, 0)
   let i = 0
   guilds.forEach(guild => {
