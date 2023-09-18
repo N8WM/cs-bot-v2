@@ -16,7 +16,7 @@ const name = Events.GuildMemberRemove
  */
 const execute = async (member) => {
   const config = getGuildGlobals(member.guild).config
-  const goodbyeMsgStr = config.goodbyeMessage.replace(/{user}/g, `${member}`)
+  const goodbyeMsgStr = config.goodbyeMessage.replace(/{user}/g, `${member.displayName}`)
   const message = await sendMessage(
     member.guild,
     config.welcomeChannelId,
