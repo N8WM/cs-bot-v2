@@ -11,7 +11,7 @@ const { isCourseRole, isMiscRole } = require("./validators")
  *   moreAssignables?: string,
  *   baseRolePos: string
  * }} Config
- * @typedef {{ assignableRoles?: AssignableRole[], config: Config }} GuildGlobals
+ * @typedef {{ assignableRoles: AssignableRole[], config: Config }} GuildGlobals
  * @typedef {import("discord.js").Collection<string, GuildGlobals>} GuildsGlobals
  */
 
@@ -39,7 +39,7 @@ const getGuildGlobals = (guild) => {
   const guildsGlobals = global.guildsGlobals
   let guildGlobals = guildsGlobals.get(guild.id)
   if (!guildGlobals) {
-    guildsGlobals.set(guild.id, { config: defaultConfig })
+    guildsGlobals.set(guild.id, { assignableRoles: [], config: defaultConfig })
     guildGlobals = guildsGlobals.get(guild.id)
   }
 
@@ -64,7 +64,7 @@ const setGuildGlobal = (guild, key, value) => {
   let guildGlobals = guildsGlobals.get(guild.id)
 
   if (!guildGlobals) {
-    guildsGlobals.set(guild.id, { config: defaultConfig })
+    guildsGlobals.set(guild.id, { assignableRoles: [], config: defaultConfig })
     guildGlobals = guildsGlobals.get(guild.id)
   }
 
@@ -81,33 +81,45 @@ const updateAssignableRoleCache = (client) => (
   client.guilds.fetch().then(oa2guilds => {
     oa2guilds.forEach(oa2guild => {
       oa2guild.fetch().then(guild => {
-        /** @type {AssignableRole[]} */
-        const guildAssignableRoles = []
-        guild.roles.fetch().then(roles => {
-          roles.forEach(role => {
-            if (isCourseRole(role))
-              guildAssignableRoles.push({
-                name: role.name,
-                value: role.id,
-                type: "course"
-              })
-            else if (isMiscRole(role))
-              guildAssignableRoles.push({
-                name: role.name,
-                value: role.id,
-                type: "misc"
-              })
-          })
-        }).catch(console.error)
-        setGuildGlobal(guild, "assignableRoles", guildAssignableRoles)
+        updateGuildAssignableRoleCache(guild)
       }).catch(console.error)
     })
   }).catch(console.error)
 )
 
+/**
+ * Updates a guild's assignableRoles array.
+ * @async
+ * @function updateGuildAssignableRoleCache
+ * @param {Guild} guild - The guild to update the assignableRoles array for.
+ * @returns {Promise<void>}
+ */
+const updateGuildAssignableRoleCache = async (guild) => {
+  /** @type {AssignableRole[]} */
+  const guildAssignableRoles = []
+  const roles = await guild.roles.fetch().catch()
+  if (!roles) return
+  roles.forEach(role => {
+    if (isCourseRole(role))
+      guildAssignableRoles.push({
+        name: role.name,
+        value: role.id,
+        type: "course"
+      })
+    else if (isMiscRole(role))
+      guildAssignableRoles.push({
+        name: role.name,
+        value: role.id,
+        type: "misc"
+      })
+  })
+  setGuildGlobal(guild, "assignableRoles", guildAssignableRoles)
+}
+
 module.exports = {
   defaultConfig,
   getGuildGlobals,
   setGuildGlobal,
-  updateAssignableRoleCache
+  updateAssignableRoleCache,
+  updateGuildAssignableRoleCache
 }

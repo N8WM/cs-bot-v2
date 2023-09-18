@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js")
 const { generateConfigEmbed, setUpConfigChannel, updateConfigEmbed } = require("../utils/configuration")
-const { getGuildGlobals } = require("../utils/globals")
+const { getGuildGlobals, updateGuildAssignableRoleCache } = require("../utils/globals")
 
 /**
  * @typedef {import("discord.js").ChatInputCommandInteraction} CommandInteraction
@@ -56,6 +56,10 @@ const data = new SlashCommandBuilder()
           .setMinValue(1)
           .setRequired(true)
       )
+  )
+  .addSubcommand(subcommand =>
+    subcommand.setName("cache-roles")
+      .setDescription("Update the assignable roles cache")
   )
   .addSubcommand(subcommand =>
     subcommand.setName("show")
@@ -202,6 +206,8 @@ const setMoreAssignables = async (interaction) => {
     ephemeral: true
   }).catch(console.error)
 
+  await updateGuildAssignableRoleCache(interaction.guild)
+
   console.log(`Config more-assignables command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
@@ -232,6 +238,27 @@ const setBaseRolePos = async (interaction) => {
   }).catch(console.error)
 
   console.log(`Config base-role-pos command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
+}
+
+/**
+ * Update the assignable roles cache
+ * @async
+ * @function cacheRoles
+ * @param {CommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+const cacheRoles = async (interaction) => {
+  const deferred = await interaction.deferReply({
+    ephemeral: true
+  }).catch(console.error)
+  if (!deferred) return
+
+  await updateGuildAssignableRoleCache(interaction.guild)
+
+  await interaction.editReply("Assignable roles cache updated.")
+    .catch(console.error)
+
+  console.log(`Config cache-roles command used by ${interaction.user.tag} in ${interaction.guild.name}.`)
 }
 
 /**
@@ -304,6 +331,9 @@ const execute = async (interaction) => {
       break
     case "base-role-pos":
       await setBaseRolePos(interaction)
+      break
+    case "cache-roles":
+      await cacheRoles(interaction)
       break
     case "show":
       await showEmbed(interaction)
