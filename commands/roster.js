@@ -86,6 +86,7 @@ const addRole = async (interaction, alias) => {
     name: alias,
     color: await generateRoleColor(interaction.guild),
     mentionable: true,
+    hoist: true,
     position: parseInt(getGuildGlobals(interaction.guild).config.baseRolePos)
   }).catch(console.error)
 
