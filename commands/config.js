@@ -59,7 +59,7 @@ const data = new SlashCommandBuilder()
   )
   .addSubcommand(subcommand =>
     subcommand.setName("cache-roles")
-      .setDescription("Update the assignable roles cache")
+      .setDescription("Only use after manually adding/removing assignable roles")
   )
   .addSubcommand(subcommand =>
     subcommand.setName("show")
