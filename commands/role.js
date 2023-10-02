@@ -42,7 +42,7 @@ const autocomplete = async (interaction) => {
   )
 
   const order = searchSort(focusedValue, filtered.map(role => role.name))
-  const sorted = order.map(item => filtered[item])
+  const sorted = order.map(item => filtered[item]).slice(0,25)
 
   await interaction.respond(sorted).catch(console.error)
 }
