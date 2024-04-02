@@ -207,8 +207,7 @@ const addChannels = async (interaction, alias, role) => {
   const newVoiceChannel = await interaction.guild.channels.create({
     name: `voice-${parseInt(alias)}`,
     type: ChannelType.GuildVoice,
-    parent: newCategory,
-    topic: `Voice chat for ${alias}`
+    parent: newCategory
   }).catch(console.error)
 
   if (!newVoiceChannel) {
