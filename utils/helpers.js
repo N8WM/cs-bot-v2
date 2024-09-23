@@ -76,12 +76,12 @@ const sendMessage = async (guild, channelId, message) => {
 }
 
 /**
- * Gets the course items for a given interaction.
+ * Gets the course items for a given interaction (just role for now).
  * @async
  * @function getInteractionCourseItems
  * @param {CommandInteraction} interaction - The interaction to get the course items for.
  * @param {Snowflake} roleId - The ID of the role to get the course items for.
- * @returns {Promise<{role: Role, category: CategoryChannel, courseChannels: RoleCollection}>}
+ * @returns {Promise<Role>}
  */
 const getInteractionCourseItems = async (interaction, roleId) => {
   const role = await interaction.guild.roles
@@ -93,7 +93,7 @@ const getInteractionCourseItems = async (interaction, roleId) => {
       .editReply(`No role matching id \`${roleId}\` was found.`)
       .catch(console.error)
     console.log(`No role matching id ${roleId} was found.`)
-    return { role: null, category: null, courseChannels: null }
+    return null
   }
 
   if (!isCourseRole(role)) {
@@ -101,44 +101,10 @@ const getInteractionCourseItems = async (interaction, roleId) => {
       .editReply(`Role \`${role.name}\` is not a course role.`)
       .catch(console.error)
     console.log(`Role ${role.name} is not a course role.`)
-    return { role: null, category: null, courseChannels: null }
+    return null
   }
 
-  const channels = await interaction.guild.channels.fetch().catch(console.error)
-  if (!channels) {
-    await interaction
-      .editReply("Failed to load channels.")
-      .catch(console.error)
-    console.log(`Failed to load channels.`)
-    return { role: null, category: null, courseChannels: null }
-  }
-
-  const category = channels.find(c =>
-    (c.type === ChannelType.GuildCategory)
-    && (c.name.toLowerCase() === role.name.toLowerCase())
-  )
-
-  if (!category || category.type !== ChannelType.GuildCategory) {
-    await interaction
-      .editReply(`Failed to find category ${role.name}.`)
-      .catch(console.error)
-    console.log(`Failed to find category ${role.name}.`)
-    return { role: null, category: null, courseChannels: null }
-  }
-
-  const courseChannels = channels.filter(c =>
-    c.parentId === category.id
-  )
-
-  if (!courseChannels) {
-    await interaction
-      .editReply(`Failed to find channels for category ${role.name}.`)
-      .catch(console.error)
-    console.log(`Failed to find channels for category ${role.name}.`)
-    return { role: null, category: null, courseChannels: null }
-  }
-
-  return { role, category, courseChannels }
+  return role
 }
 
 /**
@@ -153,8 +119,8 @@ const getInteractionCourseItems = async (interaction, roleId) => {
 const generateRoleColor = async (guild, maxAttempts = 25, minDeltaE = 5) => {
   const randomColor = () => chroma.random()
   /**
-   * @param {chroma.Color[]} colors 
-   * @param {chroma.Color} ctrl 
+   * @param {chroma.Color[]} colors
+   * @param {chroma.Color} ctrl
    * @returns {boolean}
   */
   const isTooSimilar = (colors, ctrl) => colors.some(

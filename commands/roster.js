@@ -43,7 +43,7 @@ const data = new SlashCommandBuilder()
   )
   .addSubcommand(subcommand =>
     subcommand.setName("clear")
-      .setDescription("Clear a course's message history")
+      .setDescription("Remove a course role from all members")
       .addStringOption(option =>
         option.setName("alias")
           .setDescription("Course alias (i.e. \"101 Smith\")")
@@ -53,7 +53,7 @@ const data = new SlashCommandBuilder()
   )
   .addSubcommand(subcommand =>
     subcommand.setName("clearall")
-      .setDescription("Clear all courses' message history")
+      .setDescription("Remove all course roles from all members")
   )
   .setDefaultMemberPermissions(
     PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageRoles
@@ -103,126 +103,6 @@ const addRole = async (interaction, alias) => {
 }
 
 /**
- * Add a course category and channels to server
- * @async
- * @function addChannels
- * @param {CommandInteraction} interaction
- * @param {string} alias
- * @param {Role} role
- * @returns {Promise<void>}
- */
-const addChannels = async (interaction, alias, role) => {
-  // Gather roles allowed to view new channels
-  const allRoles = await interaction.guild.roles.fetch().catch(console.error)
-  if (!allRoles) {
-    await interaction
-      .editReply("There appear to be no roles on this server, cancelling operation.")
-      .catch(console.error)
-    await role.delete().catch(console.error)
-    return
-  }
-
-  const allowedRoles = allRoles.filter(r =>
-    (r.permissions.bitfield & PermissionFlagsBits.ManageChannels)
-    || (r.id === role.id)
-  )
-
-  if (allowedRoles.size === 0) {
-    await interaction
-      .editReply("No roles would be permitted to access this course's category, cancelling operation.")
-      .catch(console.error)
-    console.log(`No roles would be permitted to access this course's category, cancelling operation. ${role.id}`)
-    await role.delete().catch(console.error)
-    return
-  }
-
-  // Create new category
-  const newCategory = await interaction.guild.channels.create({
-    name: alias,
-    type: ChannelType.GuildCategory
-  }).catch(console.error)
-
-  if (!newCategory) {
-    await interaction
-      .editReply(`Failed to create category ${alias}, cancelling operation.`)
-      .catch(console.error)
-    console.log(`Failed to create category ${alias}, cancelling operation.`)
-    await role.delete().catch(console.error)
-    return
-  }
-
-  // Set permissions for new category
-  let newPerm = await newCategory.permissionOverwrites.create(
-    interaction.guild.roles.everyone, {
-    ViewChannel: false
-  }
-  ).catch(console.error)
-
-  if (!newPerm) {
-    await interaction
-      .editReply(`Failed to set permissions for category ${alias}, cancelling operation.`)
-      .catch(console.error)
-    console.log(`Failed to set permissions for category ${alias}, cancelling operation.`)
-    await role.delete().catch(console.error)
-    await newCategory.delete().catch(console.error)
-    return
-  }
-
-  allowedRoles.forEach(async r => {
-    newPerm = await newCategory.permissionOverwrites.create(
-      r, {
-      ViewChannel: true
-    }
-    ).catch(console.error)
-
-    if (!newPerm) {
-      await interaction
-        .editReply(`Failed to set permissions for category ${alias}, cancelling operation.`)
-        .catch(console.error)
-      console.log(`Failed to set permissions for category ${alias}, cancelling operation.`)
-      await role.delete().catch(console.error)
-      await newCategory.delete().catch(console.error)
-      return
-    }
-  })
-
-  // Create new text and voice channels
-  const newTextChannel = await interaction.guild.channels.create({
-    name: `general-${parseInt(alias)}`,
-    type: ChannelType.GuildText,
-    parent: newCategory,
-    topic: `General discussion for ${alias}`
-  }).catch(console.error)
-
-  if (!newTextChannel) {
-    await interaction
-      .editReply(`Failed to create text channel ${alias}-general, cancelling operation.`)
-      .catch(console.error)
-    console.log(`Failed to create text channel ${alias}-general, cancelling operation.`)
-    await role.delete().catch(console.error)
-    await newCategory.delete().catch(console.error)
-    return
-  }
-
-  const newVoiceChannel = await interaction.guild.channels.create({
-    name: `voice-${parseInt(alias)}`,
-    type: ChannelType.GuildVoice,
-    parent: newCategory
-  }).catch(console.error)
-
-  if (!newVoiceChannel) {
-    await interaction
-      .editReply(`Failed to create voice channel ${alias}-voice, cancelling operation.`)
-      .catch(console.error)
-    console.log(`Failed to create voice channel ${alias}-voice, cancelling operation.`)
-    await role.delete().catch(console.error)
-    await newTextChannel.delete().catch(console.error)
-    await newCategory.delete().catch(console.error)
-    return
-  }
-}
-
-/**
  * Add a course to server roster
  * @async
  * @function addCourse
@@ -241,7 +121,6 @@ const addCourse = async (interaction) => {
 
   const role = await addRole(interaction, alias)
   if (!role) return
-  await addChannels(interaction, alias, role)
 
   await interaction
     .editReply(`Success!`)
@@ -265,20 +144,14 @@ const addCourse = async (interaction) => {
 const removeCourseWithRoleId = async (interaction, roleId) => {
   const guildGlobals = getGuildGlobals(interaction.guild)
 
-  const { role, category, courseChannels } = await getInteractionCourseItems(interaction, roleId)
-  if (!role || !category || !courseChannels) return false
+  const role = await getInteractionCourseItems(interaction, roleId)
+  if (!role) return false
 
-  // Delete role, category, and channels
+  // Delete role
   /** @type {string[]} */
   const failures = []
   const deletedRole = await role.delete().catch(console.error)
   if (!deletedRole) failures.push(`**ERROR** Failed to delete role ${role}. Please try again later or delete it manually.`)
-  const deletedCategory = await category.delete().catch(console.error)
-  if (!deletedCategory) failures.push(`**ERROR** Failed to delete category ${category.name}. Please delete it manually.`)
-  courseChannels.forEach(async c => {
-    const deletedChannel = await c.delete().catch(console.error)
-    if (!deletedChannel) failures.push(`**ERROR** Failed to delete channel ${c.name}. Please delete it manually.`)
-  })
 
   // Remove role from assignableRoles
   const index = guildGlobals.assignableRoles.findIndex(
@@ -372,7 +245,7 @@ const removeAllCourses = async (interaction) => {
 }
 
 /**
- * Clear a course's message history
+ * Remove a course role from all members
  * @async
  * @function clearCourseWithRoleId
  * @param {CommandInteraction} interaction
@@ -380,73 +253,17 @@ const removeAllCourses = async (interaction) => {
  * @returns {Promise<boolean>} - Whether the course was successfully cleared
  */
 const clearCourseWithRoleId = async (interaction, roleId) => {
-  const { role, category, courseChannels } = await getInteractionCourseItems(interaction, roleId)
-  if (!role || !category || !courseChannels) return
+  const role = await getInteractionCourseItems(interaction, roleId)
+  if (!role) return
 
   // Cache members
   await interaction.guild.members.fetch().catch(console.error)
   // Get members with role (excluding bots)
   const membersWithRole = role.members.filter(m => !m.user.bot)
 
-  // Clear text channel (replace with new channel)
-  const oldTextChannel = courseChannels.find(c => c.type === ChannelType.GuildText)
-  if (!oldTextChannel || oldTextChannel.type !== ChannelType.GuildText) {
-    await interaction
-      .editReply(`Failed to find text channel for ${role}.`)
-      .catch(console.error)
-    console.log(`Failed to find text channel for role with id ${role.id}.`)
-    return false
-  }
-
-  const newTextChannel = await interaction.guild.channels.create({
-    name: oldTextChannel.name,
-    type: ChannelType.GuildText,
-    parent: category,
-    topic: oldTextChannel.topic,
-    position: oldTextChannel.position
-  }).catch(console.error)
-
-  if (!newTextChannel) {
-    await interaction
-      .editReply(`Failed to create new text channel for ${role}.`)
-      .catch(console.error)
-    console.log(`Failed to create new text channel for role with id ${role.id}.`)
-    return false
-  }
-
-  // Clear voice channel (replace with new channel)
-  const oldVoiceChannel = courseChannels.find(c => c.type === ChannelType.GuildVoice)
-  if (!oldVoiceChannel || oldVoiceChannel.type !== ChannelType.GuildVoice) {
-    await interaction
-      .editReply(`Failed to find voice channel for ${role}.`)
-      .catch(console.error)
-    console.log(`Failed to find voice channel for role with id ${role.id}.`)
-    return false
-  }
-
-  const newVoiceChannel = await interaction.guild.channels.create({
-    name: oldVoiceChannel.name,
-    type: ChannelType.GuildVoice,
-    parent: category,
-    position: oldVoiceChannel.position
-  }).catch(console.error)
-
-  if (!newVoiceChannel) {
-    await interaction
-      .editReply(`Failed to create new voice channel for ${role}.`)
-      .catch(console.error)
-    console.log(`Failed to create new voice channel for role with id ${role.id}.`)
-    return false
-  }
-
-  // Delete old channels
   /** @type {string[]} */
   const failures = []
 
-  const deletedTextChannel = await oldTextChannel.delete().catch(console.error)
-  if (!deletedTextChannel) failures.push(`**ERROR** Failed to delete old text channel for ${role}. Please delete it manually.`)
-  const deletedVoiceChannel = await oldVoiceChannel.delete().catch(console.error)
-  if (!deletedVoiceChannel) failures.push(`**ERROR** Failed to delete old voice channel for ${role}. Please delete it manually.`)
   membersWithRole.forEach(async m => {
     const removedMember = await m.roles.remove(role).catch(console.error)
     if (!removedMember) failures.push(`**ERROR** Failed to remove ${m} from ${role}. Please remove them manually.`)
@@ -478,7 +295,7 @@ const clearCourseWithRoleId = async (interaction, roleId) => {
 }
 
 /**
- * Clear a course's message history
+ * Remove a course role from all members
  * @async
  * @function clearCourse
  * @param {CommandInteraction} interaction
