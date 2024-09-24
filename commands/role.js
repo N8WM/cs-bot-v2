@@ -86,9 +86,9 @@ const execute = async (interaction) => {
   }
 
   if (!role) {
-    console.error(`No role matching id ${role} was found.`)
+    console.error(`No role matching ${role} was found.`)
     interaction.reply({
-      content: `No role matching id \`${role}\` was found.`,
+      content: `No role matching \`${role}\` was found.`,
       ephemeral: true
     }).catch(console.error)
     return
@@ -97,8 +97,8 @@ const execute = async (interaction) => {
   const roleToAdd = await guild.roles.fetch(role).catch(console.error)
 
   if (!roleToAdd) {
-    console.error(`No role matching id ${role} was found.`)
-    let imsg = `No role matching id \`${role}\` was found.\n\n`
+    console.error(`No role matching ${role} was found.`)
+    let imsg = `No role matching \`${role}\` was found.\n\n`
     if (guildRequestsChannel) {
       imsg += `If your course is not listed, please request for the course ` +
         `to be added by sending a message in ${guildRequestsChannel}. A staff ` +

@@ -16,7 +16,9 @@ const name = Events.GuildMemberAdd
  */
 const execute = async (member) => {
   const config = getGuildGlobals(member.guild).config
-  const welcomeMsgStr = config.welcomeMessage.replace(/{user}/g, `${member}`)
+  const welcomeMsgStr = config.welcomeMessage
+    .replace(/{user}/g, `${member}`)
+    .replace(/{n}/g, "\n")
   const message = await sendMessage(
     member.guild,
     config.welcomeChannelId,

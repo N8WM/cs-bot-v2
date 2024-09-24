@@ -25,7 +25,7 @@ const data = new SlashCommandBuilder()
       .setDescription("Set the welcome message for the server")
       .addStringOption(option =>
         option.setName("message")
-          .setDescription("The welcome message; can use the \"{user}\" macro")
+          .setDescription("The welcome message; macros: \"{user}\" and \"{n}\"")
           .setRequired(true)
       )
   )
@@ -34,7 +34,7 @@ const data = new SlashCommandBuilder()
       .setDescription("Set the goodbye message for the server")
       .addStringOption(option =>
         option.setName("message")
-          .setDescription("The goodbye message; can use the \"{user}\" macro")
+          .setDescription("The goodbye message; macros: \"{user}\" and \"{n}\"")
           .setRequired(true)
       )
   )
@@ -87,7 +87,7 @@ const data = new SlashCommandBuilder()
  * Set the welcome channel for the server
  * @async
  * @function setWelcomeChannel
- * @param {CommandInteraction} interaction 
+ * @param {CommandInteraction} interaction
  * @returns {Promise<void>}
  */
 const setWelcomeChannel = async (interaction) => {
@@ -356,7 +356,7 @@ const init = async (interaction) => {
  * Make changes to the guild config
  * @async
  * @function execute
- * @param {CommandInteraction} interaction 
+ * @param {CommandInteraction} interaction
  * @returns {Promise<void>}
  */
 const execute = async (interaction) => {
