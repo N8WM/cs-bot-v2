@@ -21,5 +21,8 @@
     "depcom": "node deploy-commands.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "eslint": "^9.26.0"
   }
 }
